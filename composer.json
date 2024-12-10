@@ -7,8 +7,8 @@
         }
     },
     "require": {
-        "phpseclib/phpseclib": "^3.0",
-        "php-gnupg/gnupg": "^1.4"
+	  "phpseclib/phpseclib": "^3.0",
+        "placetopay/php-gnupg": "dev-master"
     },
     "minimum-stability": "dev",
     "license": "MIT",
@@ -25,4 +25,3 @@
         }
     ]
 }
-
