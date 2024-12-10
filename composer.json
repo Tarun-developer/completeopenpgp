@@ -1,0 +1,28 @@
+{
+    "name": "botdigit/completeopenpgp",
+    "description": "A complete OpenPGP package for Laravel that supports the ElGamal cryptosystem (with elliptic curve support)",
+    "autoload": {
+        "psr-4": {
+            "CompleteOpenPGP\\": "src/"
+        }
+    },
+    "require": {
+        "phpseclib/phpseclib": "^3.0",
+        "php-gnupg/gnupg": "^1.4"
+    },
+    "minimum-stability": "dev",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Botdigit",
+            "email": "botdigit@gmail.com"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Tarun-developer/completeopenpgp"
+        }
+    ]
+}
+
