@@ -1,0 +1,10 @@
+# Ignore vendor folder (commonly used for dependencies)
+vendor/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore all `.log` files
+*.log
+

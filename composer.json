@@ -1,0 +1,25 @@
+{
+    "name": "botdigit/completeopenpgp",
+    "description": "A complete OpenPGP package for Laravel that supports the ElGamal cryptosystem (with elliptic curve support",
+    "type": "library",
+    "require": {
+        "phpseclib/phpseclib": "^3.0",
+        "lib-libsodium": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+	    "KeyManagement\\": "src/KeyManagement/",
+            "Encryption\\": "src/Encryption/",
+            "Signer\\": "src/Signer/",
+            "Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "botdigit"
+        }
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
+    }
+}
