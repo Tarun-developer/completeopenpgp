@@ -3,12 +3,12 @@ namespace KeyManagement;
 
 use phpseclib3\Crypt\EC;
 
-class ECDSAGenerator
+class ECDHGenerator
 {
     /**
-     * Generate an ECDSA key pair.
+     * Generate an ECDH key pair.
      * 
-     * @param string $curve Curve name (e.g., 'nistp256', 'nistp384', 'secp256k1').
+     * @param string $curve Curve name (e.g., 'nistp256', 'nistp384').
      * @return array
      */
     public static function generateKey($curve = 'nistp256')

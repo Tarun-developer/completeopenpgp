@@ -4,18 +4,16 @@ namespace KeyManagement;
 use Encryption\RSAEncryptor;
 use Encryption\ElGamalEncryptor;
 use Encryption\EdDSAEncryptor;
+use Encryption\ECDHEncryptor;
 use Signer\RSASigner;
 use Signer\ElGamalSigner;
 use Signer\EdDSASigner;
-// use KeyManagement\RSAGenerator;
+use Signer\ECDSASigner;
 
 class PGPKeyManager
 {
     public static function generateKey($algorithm='RSA', $keySize = 2048)
     {
-
-         
-
         switch ($algorithm) {
             case 'RSA':
                 return RSAGenerator::generateKey($keySize);
@@ -23,6 +21,10 @@ class PGPKeyManager
                 return ElGamalGenerator::generateKey($keySize);
             case 'EdDSA':
                 return EdDSAGenerator::generateKey();
+            case 'ECDSA':
+                return ECDSAGenerator::generateKey();
+            case 'ECDH':
+                return ECDHGenerator::generateKey();
             default:
                 throw new \Exception("Unknown algorithm: $algorithm");
         }
@@ -37,6 +39,8 @@ class PGPKeyManager
                 return ElGamalEncryptor::encrypt($message, $publicKey);
             case 'EdDSA':
                 return EdDSAEncryptor::encrypt($message, $publicKey);
+            case 'ECDH':
+                return ECDHEncryptor::encrypt($message, $publicKey);
             default:
                 throw new \Exception("Unknown algorithm: $algorithm");
         }
@@ -51,6 +55,8 @@ class PGPKeyManager
                 return ElGamalEncryptor::decrypt($ciphertext, $privateKey);
             case 'EdDSA':
                 return EdDSAEncryptor::decrypt($ciphertext, $privateKey);
+            case 'ECDH':
+                return ECDHEncryptor::decrypt($ciphertext, $privateKey);
             default:
                 throw new \Exception("Unknown algorithm: $algorithm");
         }
@@ -58,15 +64,13 @@ class PGPKeyManager
 
     public static function sign($algorithm, $message, $privateKey)
     {
-
-       
         switch ($algorithm) {
             case 'RSA':
                 return RSASigner::sign($message, $privateKey);
-            case 'ElGamal':
-                return ElGamalSigner::sign($message, $privateKey);
             case 'EdDSA':
                 return EdDSASigner::sign($message, $privateKey);
+            case 'ECDSA':
+                return ECDSASigner::sign($message, $privateKey);
             default:
                 throw new \Exception("Unknown algorithm: $algorithm");
         }
@@ -77,10 +81,10 @@ class PGPKeyManager
         switch ($algorithm) {
             case 'RSA':
                 return RSASigner::verify($message, $signature, $publicKey);
-            case 'ElGamal':
-                return ElGamalSigner::verify($message, $signature, $publicKey);
             case 'EdDSA':
                 return EdDSASigner::verify($message, $signature, $publicKey);
+            case 'ECDSA':
+                return ECDSASigner::verify($message, $signature, $publicKey);
             default:
                 throw new \Exception("Unknown algorithm: $algorithm");
         }
@@ -91,21 +95,15 @@ class PGPKeyManager
      */
     public static function enarmor($data, $marker = 'MESSAGE', array $headers = [])
     {
-        // Create the header
         $header = self::header($marker, $headers);
-        
-        // Base64 encode the message data
         $encodedData = chunk_split(base64_encode($data), 64, "\n");
-
-        // Calculate CRC24 checksum
-        $crc24 = self::crc24($data);
-        $encodedCRC24 = strtoupper(base64_encode(substr(pack('N', $crc24), 1))); // Base64 CRC24
-
-        // Create the footer
-        $footer = self::footer($marker, $encodedCRC24);
-
-        // Combine the components into the final armored message
-        return $header . $encodedData . $footer;
+        
+        $crc = self::crc24($data);
+        $crc_bytes = pack('N', $crc);
+        $encodedCRC = '=' . base64_encode(substr($crc_bytes, 1)) . "\n";
+        
+        $footer = self::footer($marker);
+        return $header . $encodedData . $encodedCRC . $footer;
     }
 
     /**
@@ -113,30 +111,59 @@ class PGPKeyManager
      */
     public static function unarmor($text, $marker = 'MESSAGE')
     {
-        // Extract and verify header/footer
-        $header = self::header($marker);
-        $footer = self::footer($marker);
-
+        $header = trim(self::header($marker));
+        $footer = trim(self::footer($marker));
+        
+        $text = trim($text);
         if (strpos($text, $header) === false || strpos($text, $footer) === false) {
-            throw new Exception("Invalid PGP armor: Missing header or footer.");
+            throw new \Exception("Invalid PGP armor: Missing header or footer.");
         }
-
-        // Extract the base64-encoded data
-        $startPos = strpos($text, $header) + strlen($header);
-        $endPos = strpos($text, $footer);
-        $encodedData = substr($text, $startPos, $endPos - $startPos);
-
-        // Decode the base64-encoded data
-        $decodedData = base64_decode(trim($encodedData));
-
-        // Verify the CRC24 checksum
-        $expectedCRC24 = substr(pack('N', self::crc24($decodedData)), 1);
-        $actualCRC24 = substr(base64_decode(substr($text, -8)), 1); // Extract and compare CRC
-
-        if ($expectedCRC24 !== $actualCRC24) {
-            throw new Exception("CRC24 checksum mismatch.");
+        
+        // Extract data between header and footer
+        $start = strpos($text, $header) + strlen($header);
+        $end = strpos($text, $footer);
+        $body = trim(substr($text, $start, $end - $start));
+        
+        // Split body into headers and base64 body (separated by blank line)
+        $parts = explode("\n\n", $body, 2);
+        if (count($parts) === 2) {
+            $base64Part = $parts[1];
+        } else {
+            // Check if there are header lines (containing ':')
+            if (strpos($parts[0], ':') !== false) {
+                $lines = explode("\n", $parts[0]);
+                $base64Lines = [];
+                foreach ($lines as $line) {
+                    if (strpos($line, ':') === false) {
+                        $base64Lines[] = $line;
+                    }
+                }
+                $base64Part = implode("\n", $base64Lines);
+            } else {
+                $base64Part = $parts[0];
+            }
         }
-
+        
+        $lines = explode("\n", trim($base64Part));
+        $checksumLine = trim(array_pop($lines));
+        $base64Data = implode("", $lines);
+        
+        if (strpos($checksumLine, '=') !== 0) {
+            $base64Data = trim($base64Part);
+            $actualCRC = null;
+        } else {
+            $actualCRC = base64_decode(substr($checksumLine, 1));
+        }
+        
+        $decodedData = base64_decode($base64Data);
+        
+        if ($actualCRC !== null) {
+            $expectedCRC = substr(pack('N', self::crc24($decodedData)), 1);
+            if ($expectedCRC !== $actualCRC) {
+                throw new \Exception("CRC24 checksum mismatch.");
+            }
+        }
+        
         return $decodedData;
     }
 
@@ -149,15 +176,20 @@ class PGPKeyManager
         foreach ($headers as $key => $value) {
             $header .= $key . ': ' . $value . "\n";
         }
+        $header .= "\n"; // Blank line separating headers from data
         return $header;
     }
 
     /**
      * Generate the footer for PGP armor
      */
-    public static function footer($marker, $crc24)
+    public static function footer($marker, $crc24 = null)
     {
-        return "-----END " . strtoupper($marker) . "-----\n" . $crc24 . "\n";
+        $footer = "-----END " . strtoupper($marker) . "-----\n";
+        if ($crc24 !== null) {
+            $footer = "=" . $crc24 . "\n" . $footer;
+        }
+        return $footer;
     }
 
     /**
@@ -165,23 +197,19 @@ class PGPKeyManager
      */
     public static function crc24($data)
     {
-        $crc = 0x000000; // Initial CRC value
+        $crc = 0xb704ce; // Standard OpenPGP CRC24 preset (0xB704CE)
         $length = strlen($data);
 
         for ($i = 0; $i < $length; $i++) {
             $crc ^= (ord($data[$i]) << 16);
             for ($j = 0; $j < 8; $j++) {
-                if ($crc & 0x800000) {
-                    $crc = ($crc << 1) ^ 0x864CFB; // Polynomial for CRC24
-                } else {
-                    $crc <<= 1;
+                $crc <<= 1;
+                if ($crc & 0x1000000) {
+                    $crc ^= 0x1864cfb; // OpenPGP CRC24 polynomial
                 }
             }
-            $crc &= 0xFFFFFF; // Keep CRC value within 24 bits
         }
 
-        return $crc;
+        return $crc & 0xffffff;
     }
 }
-
-

@@ -3,47 +3,20 @@ namespace Tests\KeyManagement;
 
 use PHPUnit\Framework\TestCase;
 use KeyManagement\PGPKeyManager;
-use KeyManagement\RSAGenerator;
-use KeyManagement\ElGamalGenerator;
-use KeyManagement\EdDSAGenerator;
-use Encryption\RSAEncryptor;
-use Encryption\ElGamalEncryptor;
-use Encryption\EdDSAEncryptor;
-use Signer\RSASigner;
-use Signer\ElGamalSigner;
-use Signer\EdDSASigner;
 
 class PGPKeyManagerTest extends TestCase
 {
-    // Test RSA key generation
+    // Test RSA Key Generation
     public function testGenerateRSAKey()
     {
-
-
         $keyPair = PGPKeyManager::generateKey('RSA');
-
-        
         $this->assertArrayHasKey('public', $keyPair);
         $this->assertArrayHasKey('private', $keyPair);
+        $this->assertNotEmpty($keyPair['public']);
+        $this->assertNotEmpty($keyPair['private']);
     }
 
-    // Test ElGamal key generation
-    // public function testGenerateElGamalKey()
-    // {
-    //     $keyPair = PGPKeyManager::generateKey('ElGamal');
-    //     $this->assertArrayHasKey('public', $keyPair);
-    //     $this->assertArrayHasKey('private', $keyPair);
-    // }
-
-    // Test EdDSA key generation
-    public function testGenerateEdDSAKey()
-    {
-        $keyPair = PGPKeyManager::generateKey('EdDSA');
-        $this->assertArrayHasKey('public', $keyPair);
-        $this->assertArrayHasKey('private', $keyPair);
-    }
-
-    // // Test RSA encryption and decryption
+    // Test RSA Encryption & Decryption
     public function testRSAEncryptDecrypt()
     {
         $keyPair = PGPKeyManager::generateKey('RSA');
@@ -55,68 +28,7 @@ class PGPKeyManagerTest extends TestCase
         $this->assertEquals($message, $decrypted);
     }
 
-    // // Test ElGamal encryption and decryption
-    // // public function testElGamalEncryptDecrypt()
-    // // {
-    // //     $keyPair = PGPKeyManager::generateKey('ElGamal');
-    // //     $message = 'Hello, ElGamal!';
-
-    // //     $encrypted = PGPKeyManager::encrypt('ElGamal', $message, $keyPair['public']);
-    // //     $decrypted = PGPKeyManager::decrypt('ElGamal', $encrypted, $keyPair['private']);
-
-    // //     $this->assertEquals($message, $decrypted);
-    // // }
-
-    // // Test EdDSA encryption and decryption (Note: EdDSA is typically for signing, not encryption)
-   public function testEdDSAEncryptDecrypt()
-{
-    // Generate EdDSA key pair
-    $keyPair = PGPKeyManager::generateKey('EdDSA');
-    
-    // Print the raw public and private keys
-    print_r("Public Key (Base64 Encoded): ");
-    print_r(base64_encode($keyPair['public']));  // Base64 encode the public key for readability
-    print_r("\n");
-
-    print_r("Private Key (Base64 Encoded): ");
-    print_r(base64_encode($keyPair['private']));  // Base64 encode the private key for readability
-    print_r("\n");
-
-    // Message to sign
-    $message = 'Hello, EdDSA!';
-
-    // Signing the message using the private key
-    $signature = PGPKeyManager::sign('EdDSA', $message, $keyPair['private']);
-    
-    // Print the base64-encoded signature for readability
-    print_r("Signature (Base64 Encoded): ");
-    print_r(base64_encode($signature));  // Base64 encode the signature for readability
-    print_r("\n");
-
-    // Make sure the signature is correctly passed as a binary string to the verification method
-    $signatureBinary = base64_decode(base64_encode($signature));  // Ensure binary data for verification
-
-    // Verifying the signature using the raw public key (not base64 encoded)
-    // The public key should be the raw 32-byte key, not base64 encoded
-    $publicKeyRaw = $keyPair['public']; // No encoding, just raw key
-    
-    // Verifying the signature using the raw public key
-    $verified = PGPKeyManager::verify('EdDSA', $message, $signatureBinary, $publicKeyRaw);
-    
-    // Print the verification result (true or false)
-    print_r("********\n");
-    print_r($verified ? 'Signature Verified' : 'Signature Not Verified');
-    
-    // Stop execution after printing the verification status
-    die;
-
-    // Assert that the signature is valid
-    $this->assertTrue($verified);
-}
-
-
-
-    // // Test RSA signing and verification
+    // Test RSA Signing & Verification
     public function testRSASignVerify()
     {
         $keyPair = PGPKeyManager::generateKey('RSA');
@@ -128,28 +40,117 @@ class PGPKeyManagerTest extends TestCase
         $this->assertTrue($verified);
     }
 
-    // // Test ElGamal signing and verification
-    // // public function testElGamalSignVerify()
-    // // {
-    // //     $keyPair = PGPKeyManager::generateKey('ElGamal');
-    // //     $message = 'Hello, ElGamal Signing!';
+    // Test ElGamal Key Generation
+    public function testGenerateElGamalKey()
+    {
+        $keyPair = PGPKeyManager::generateKey('ElGamal');
+        $this->assertArrayHasKey('public', $keyPair);
+        $this->assertArrayHasKey('private', $keyPair);
+        $this->assertNotEmpty($keyPair['public']);
+        $this->assertNotEmpty($keyPair['private']);
+    }
 
-    // //     $signature = PGPKeyManager::sign('ElGamal', $message, $keyPair['private']);
-    // //     $verified = PGPKeyManager::verify('ElGamal', $message, $signature, $keyPair['public']);
+    // Test ElGamal Encryption & Decryption
+    public function testElGamalEncryptDecrypt()
+    {
+        $keyPair = PGPKeyManager::generateKey('ElGamal');
+        $message = 'Hello, ElGamal!';
 
-    // //     $this->assertTrue($verified);
-    // // }
+        $encrypted = PGPKeyManager::encrypt('ElGamal', $message, $keyPair['public']);
+        $decrypted = PGPKeyManager::decrypt('ElGamal', $encrypted, $keyPair['private']);
 
-    // // Test EdDSA signing and verification
-    // public function testEdDSASignVerify()
-    // {
-    //     $keyPair = PGPKeyManager::generateKey('EdDSA');
-    //     $message = 'Hello, EdDSA Signing!';
+        $this->assertEquals($message, $decrypted);
+    }
 
-    //     $signature = PGPKeyManager::sign('EdDSA', $message, $keyPair['private']);
-    //     $verified = PGPKeyManager::verify('EdDSA', $message, $signature, $keyPair['public']);
+    // Test EdDSA Key Generation
+    public function testGenerateEdDSAKey()
+    {
+        $keyPair = PGPKeyManager::generateKey('EdDSA');
+        $this->assertArrayHasKey('public', $keyPair);
+        $this->assertArrayHasKey('private', $keyPair);
+        $this->assertNotEmpty($keyPair['public']);
+        $this->assertNotEmpty($keyPair['private']);
+    }
 
-    //     $this->assertTrue($verified);
-    // }
+    // Test EdDSA Signing & Verification
+    public function testEdDSASignVerify()
+    {
+        $keyPair = PGPKeyManager::generateKey('EdDSA');
+        $message = 'Hello, EdDSA Signing!';
+
+        $signature = PGPKeyManager::sign('EdDSA', $message, $keyPair['private']);
+        $verified = PGPKeyManager::verify('EdDSA', $message, $signature, $keyPair['public']);
+
+        $this->assertTrue($verified);
+    }
+
+    // Test EdDSA Encryption & Decryption (via Curve25519)
+    public function testEdDSAEncryptDecrypt()
+    {
+        $keyPair = PGPKeyManager::generateKey('EdDSA');
+        $message = 'Hello, EdDSA Encryption!';
+
+        $encrypted = PGPKeyManager::encrypt('EdDSA', $message, $keyPair['public']);
+        $decrypted = PGPKeyManager::decrypt('EdDSA', $encrypted, $keyPair['private']);
+
+        $this->assertEquals($message, $decrypted);
+    }
+
+    // Test ECDSA Key Generation
+    public function testGenerateECDSAKey()
+    {
+        $keyPair = PGPKeyManager::generateKey('ECDSA');
+        $this->assertArrayHasKey('public', $keyPair);
+        $this->assertArrayHasKey('private', $keyPair);
+        $this->assertNotEmpty($keyPair['public']);
+        $this->assertNotEmpty($keyPair['private']);
+    }
+
+    // Test ECDSA Signing & Verification
+    public function testECDSASignVerify()
+    {
+        $keyPair = PGPKeyManager::generateKey('ECDSA');
+        $message = 'Hello, ECDSA Signing!';
+
+        $signature = PGPKeyManager::sign('ECDSA', $message, $keyPair['private']);
+        $verified = PGPKeyManager::verify('ECDSA', $message, $signature, $keyPair['public']);
+
+        $this->assertTrue($verified);
+    }
+
+    // Test ECDH Key Generation
+    public function testGenerateECDHKey()
+    {
+        $keyPair = PGPKeyManager::generateKey('ECDH');
+        $this->assertArrayHasKey('public', $keyPair);
+        $this->assertArrayHasKey('private', $keyPair);
+        $this->assertNotEmpty($keyPair['public']);
+        $this->assertNotEmpty($keyPair['private']);
+    }
+
+    // Test ECDH Encryption & Decryption
+    public function testECDHEncryptDecrypt()
+    {
+        $keyPair = PGPKeyManager::generateKey('ECDH');
+        $message = 'Hello, ECDH ECIES!';
+
+        $encrypted = PGPKeyManager::encrypt('ECDH', $message, $keyPair['public']);
+        $decrypted = PGPKeyManager::decrypt('ECDH', $encrypted, $keyPair['private']);
+
+        $this->assertEquals($message, $decrypted);
+    }
+
+    // Test PGP Armor / Unarmor utilities
+    public function testPGPArmor()
+    {
+        $data = "Confidential PGP Payload";
+        $armored = PGPKeyManager::enarmor($data, 'MESSAGE', ['Version' => 'CompleteOpenPGP v1.1.0']);
+        
+        $this->assertStringContainsString('-----BEGIN MESSAGE-----', $armored);
+        $this->assertStringContainsString('-----END MESSAGE-----', $armored);
+        $this->assertStringContainsString('Version: CompleteOpenPGP v1.1.0', $armored);
+
+        $unarmored = PGPKeyManager::unarmor($armored, 'MESSAGE');
+        $this->assertEquals($data, $unarmored);
+    }
 }
-
